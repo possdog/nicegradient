@@ -8,10 +8,6 @@ use shard_noise::shard_noise;
 mod parse_color;
 use parse_color::hex_to_rgb;
 
-const SHARPNESS: f32 = 33.0;
-const SCALE: f32 = 3.0;
-const NOISE: f32 = 0.2;
-
 #[derive(FromArgs)]
 /// Create a nice gradient.
 struct GradientSettings {
@@ -23,25 +19,41 @@ struct GradientSettings {
     #[argh(option, short = 'h')]
     height: u32,
 
-    /// starting color for the gradient (default: #7A76DA)
-    #[argh(option, short = 'a', default = "String::from(\"#7A76DA\")")]
+    /// starting color for the gradient (default: #000000)
+    #[argh(option, short = 'a', default = "String::from(\"#000000\")")]
     color_a: String,
 
-    /// ending color for the gradient (default: #A8C3E9)
-    #[argh(option, short = 'b', default = "String::from(\"A8C3E9\")")]
+    /// ending color for the gradient (default: #FFFFFF)
+    #[argh(option, short = 'b', default = "String::from(\"#FFFFFF\")")]
     color_b: String,
+
+    /// sharpness of the gradient (default: 33.0)
+    #[argh(option, default = "33.0")]
+    sharpness: f32,
+
+    /// scaling factor (default: 3.0)
+    #[argh(option, default = "3.0")]
+    scale: f32,
+
+    /// amount of noise (default: 0.2)
+    #[argh(option, default = "0.2")]
+    noise: f32,
 
     /// output filename (default: gradient.png)
     #[argh(option, short = 'o', default = "String::from(\"gradient.png\")")]
-    output: String
+    output: String,
 }
 
+// This could be replaced with a perceptual color blending function,
+// but this is good enough for now.
 fn lerp(v: f32, a: f32, b: f32) -> f32 {
     a + v * (b - a)
 }
 
 fn main() {
     let gradient: GradientSettings = argh::from_env();
+
+    let min_dimension = min(gradient.width, gradient.height) as f32;
 
     let color_a = hex_to_rgb(&gradient.color_a);
     let color_b = hex_to_rgb(&gradient.color_b);
@@ -51,18 +63,16 @@ fn main() {
 
     let mut rng = rand::rng();
 
-    let entropy = rng.random::<f32>() * 100.0;
+    let entropy = rng.random::<f32>() * 100.0; // Arbitrary multiplier
 
     let mut img = Rgb32FImage::new(gradient.width, gradient.height);
 
-    let min_dimension = min(gradient.width, gradient.height) as f32;
-
     for (x, y, pixel) in img.enumerate_pixels_mut() {
-        let x = (x as f32) / min_dimension * SCALE;
-        let y = (y as f32) / min_dimension * SCALE;
+        let x = (x as f32) / min_dimension * gradient.scale;
+        let y = (y as f32) / min_dimension * gradient.scale;
 
-        let shard_noise = (shard_noise([x, y, entropy], SHARPNESS)
-            + (rng.random::<f32>() * 2.0 - 1.0) * NOISE)
+        let shard_noise = (shard_noise([x, y, entropy], gradient.sharpness)
+            + (rng.random::<f32>() * 2.0 - 1.0) * gradient.noise)
             .clamp(0.0, 1.0);
 
         *pixel = Rgb([
