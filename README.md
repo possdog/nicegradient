@@ -1,3 +1,3 @@
 # nicegradient
 
-Rust create for making nice gradients, for my own use.
+Rust CLI for making nice gradients, for my own use.
