@@ -545,6 +545,7 @@ dependencies = [
  "colors-transform",
  "image",
  "rand",
+ "rayon",
 ]
 
 [[package]]

@@ -1,6 +1,7 @@
 use argh::FromArgs;
 use image::{DynamicImage, Rgb, Rgb32FImage};
 use rand::prelude::*;
+use rayon::prelude::*;
 use std::cmp::min;
 use std::io::{self, Write};
 mod shard_noise;
@@ -62,25 +63,30 @@ fn main() {
     io::stdout().flush().unwrap();
 
     let mut rng = rand::rng();
-
     let entropy = rng.random::<f32>() * 100.0; // Arbitrary multiplier
 
     let mut img = Rgb32FImage::new(gradient.width, gradient.height);
 
-    for (x, y, pixel) in img.enumerate_pixels_mut() {
-        let x = (x as f32) / min_dimension * gradient.scale;
-        let y = (y as f32) / min_dimension * gradient.scale;
+    img.enumerate_pixels_mut()
+        .par_bridge()
+        .for_each(|(x, y, pixel)| {
+            // This seems wasteful, but it turns out that this returns a handle
+            // to a pre-initialized ThreadRng. Harmless!
+            let mut rng = rand::rng();
 
-        let shard_noise = (shard_noise([x, y, entropy], gradient.sharpness)
-            + (rng.random::<f32>() * 2.0 - 1.0) * gradient.noise)
-            .clamp(0.0, 1.0);
+            let x = (x as f32) / min_dimension * gradient.scale;
+            let y = (y as f32) / min_dimension * gradient.scale;
 
-        *pixel = Rgb([
-            lerp(shard_noise, color_a.0, color_b.0),
-            lerp(shard_noise, color_a.1, color_b.1),
-            lerp(shard_noise, color_a.2, color_b.2),
-        ]);
-    }
+            let shard_noise = (shard_noise([x, y, entropy], gradient.sharpness)
+                + (rng.random::<f32>() * 2.0 - 1.0) * gradient.noise)
+                .clamp(0.0, 1.0);
+
+            *pixel = Rgb([
+                lerp(shard_noise, color_a.0, color_b.0),
+                lerp(shard_noise, color_a.1, color_b.1),
+                lerp(shard_noise, color_a.2, color_b.2),
+            ]);
+        });
 
     DynamicImage::ImageRgb32F(img)
         .to_rgb8()
