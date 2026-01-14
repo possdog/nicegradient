@@ -63,7 +63,7 @@ fn main() {
     io::stdout().flush().unwrap();
 
     let mut rng = rand::rng();
-    let entropy = rng.random::<f32>() * 100.0; // Arbitrary multiplier
+    let entropy = rng.random::<f32>() * 1000.0; // Arbitrary multiplier
 
     let mut img = Rgb32FImage::new(gradient.width, gradient.height);
 
