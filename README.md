@@ -1,5 +1,7 @@
 # nicegradient
 
+> 🤖 This project was made by a human with LLM assistance.
+
 CLI for making nice gradients.
 
 ```
