@@ -30,15 +30,15 @@ struct GradientSettings {
 
     /// sharpness of the gradient (default: 33.0)
     #[argh(option, default = "33.0")]
-    sharpness: f32,
+    sharpness: f64,
 
     /// scaling factor (default: 3.0)
     #[argh(option, default = "3.0")]
-    scale: f32,
+    scale: f64,
 
     /// amount of noise (default: 0.2)
     #[argh(option, default = "0.2")]
-    noise: f32,
+    noise: f64,
 
     /// output filename (default: gradient.png)
     #[argh(option, short = 'o', default = "String::from(\"gradient.png\")")]
@@ -52,9 +52,10 @@ fn lerp(v: f32, a: f32, b: f32) -> f32 {
 }
 
 fn main() {
+    let _x = std::f64::consts::PI;
     let gradient: GradientSettings = argh::from_env();
 
-    let min_dimension = min(gradient.width, gradient.height) as f32;
+    let min_dimension = min(gradient.width, gradient.height) as f64;
 
     let color_a = hex_to_rgb(&gradient.color_a);
     let color_b = hex_to_rgb(&gradient.color_b);
@@ -63,7 +64,7 @@ fn main() {
     io::stdout().flush().unwrap();
 
     let mut rng = rand::rng();
-    let entropy = rng.random::<f32>() * 1000.0; // Arbitrary multiplier
+    let entropy = rng.random::<f64>() * 1000.0; // Arbitrary multiplier
 
     let mut img = Rgb32FImage::new(gradient.width, gradient.height);
 
@@ -74,17 +75,17 @@ fn main() {
             // to a pre-initialized ThreadRng. Harmless!
             let mut rng = rand::rng();
 
-            let x = (x as f32) / min_dimension * gradient.scale;
-            let y = (y as f32) / min_dimension * gradient.scale;
+            let x = (x as f64) / min_dimension * gradient.scale;
+            let y = (y as f64) / min_dimension * gradient.scale;
 
             let shard_noise = (shard_noise([x, y, entropy], gradient.sharpness)
-                + (rng.random::<f32>() * 2.0 - 1.0) * gradient.noise)
+                + (rng.random::<f64>() * 2.0 - 1.0) * gradient.noise)
                 .clamp(0.0, 1.0);
 
             *pixel = Rgb([
-                lerp(shard_noise, color_a.0, color_b.0),
-                lerp(shard_noise, color_a.1, color_b.1),
-                lerp(shard_noise, color_a.2, color_b.2),
+                lerp(shard_noise as f32, color_a.0, color_b.0),
+                lerp(shard_noise as f32, color_a.1, color_b.1),
+                lerp(shard_noise as f32, color_a.2, color_b.2),
             ]);
         });
 
