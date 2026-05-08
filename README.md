@@ -1,6 +1,6 @@
 # nicegradient
 
-> 🤖 This project was made by a human with LLM assistance.
+> 🤖 This code was written by a human using LLM assistance.
 
 CLI for making nice gradients.
 
