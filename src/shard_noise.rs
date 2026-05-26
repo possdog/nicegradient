@@ -8,6 +8,7 @@ use crate::shader::Shader;
 use std::f32::consts;
 
 const TAU: f64 = consts::TAU as f64;
+const NEIGHBOR_RADIUS: i32 = 2;
 
 /// A utility function that behaves like the GLSL `fract()` built-in.
 /// Returns the fractional part of `x` (i.e. `x - floor(x)`).
@@ -48,11 +49,12 @@ impl Shader for ShardNoise {
         let mut v = 0.0; // Accumulates the weighted noise values
         let mut t = 0.0; // Accumulates the total weights for normalization
 
-        // Iterate over a 3x3x3 grid of neighboring cells.
-        // This is necessary to account for influence from adjacent noise cells.
-        for z in -1..=1 {
-            for y in -1..=1 {
-                for x in -1..=1 {
+        // Iterate over neighboring cells. The exponential falloff has infinite
+        // support, so using only immediately adjacent cells makes the summed
+        // contribution jump at integer cell boundaries.
+        for z in -NEIGHBOR_RADIUS..=NEIGHBOR_RADIUS {
+            for y in -NEIGHBOR_RADIUS..=NEIGHBOR_RADIUS {
+                for x in -NEIGHBOR_RADIUS..=NEIGHBOR_RADIUS {
                     // Cell offset vector
                     let o = [x as f64, y as f64, z as f64];
                     // Absolute integer coordinate of the neighboring cell
@@ -98,5 +100,29 @@ impl Shader for ShardNoise {
 
         // Normalize accumulated value by total weight, and map from [-1.0, 1.0] to [0.0, 1.0]
         (v / t) * 0.5 + 0.5
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn evaluate_is_continuous_across_cell_boundaries() {
+        let shader = ShardNoise { sharpness: 33.0 };
+        let entropy = 715.916509309526;
+        let epsilon = 1.0e-9;
+
+        for boundary in [1.0, 2.0] {
+            for y in [0.125, 0.5, 0.916] {
+                let before = shader.evaluate([boundary - epsilon, y, entropy]);
+                let after = shader.evaluate([boundary + epsilon, y, entropy]);
+
+                assert!(
+                    (before - after).abs() < 1.0e-5,
+                    "seam at x={boundary}, y={y}: {before} vs {after}"
+                );
+            }
+        }
     }
 }
